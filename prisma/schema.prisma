@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 金流商設定（API key 加密後落地）
+model GatewayConfig {
+  id          String   @id @default(cuid())
+  // ecpay / newebpay / linepay ...
+  provider    String   @unique
+  displayName String
+  enabled     Boolean  @default(false)
+  // 是否走測試環境
+  sandbox     Boolean  @default(true)
+  // JSON 字串 of { merchantId, hashKey, hashIv, ... }，整包 AES-256-GCM 加密
+  // 格式: "<iv_hex>:<authTag_hex>:<ciphertext_hex>"
+  credentials String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders Order[]
+}
+
+// 訂單
+model Order {
+  id          String   @id @default(cuid())
+  // 給金流商的短編號（綠界 MerchantTradeNo 上限 20）
+  tradeNo     String   @unique
+  amount      Int
+  itemName    String
+  status      String   @default("pending") // pending | paid | failed | expired | cancelled
+  provider    String
+  gatewayId   String
+  gateway     GatewayConfig @relation(fields: [gatewayId], references: [id])
+
+  // Discord 來源
+  guildId     String
+  channelId   String
+  // 開單者
+  creatorId   String
+  // 指定的付款者（可選）
+  payerId     String?
+  // 第一則 embed（含付款按鈕）
+  embedMessageId   String?
+  // 監測狀態訊息
+  monitorMessageId String?
+
+  // 金流回傳資料（JSON）
+  gatewayPayload   String?
+  paidAt           DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  logs PaymentLog[]
+}
+
+// callback / 操作日誌
+model PaymentLog {
+  id        String   @id @default(cuid())
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+  level     String   // info | warn | error
+  event     String   // callback_received | callback_verified | message_edited | error
+  provider  String?
+  message   String
+  payload   String?  // 原始 callback body / 詳情 (JSON)
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+// 後台管理員
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  lastLoginAt  DateTime?
+}
