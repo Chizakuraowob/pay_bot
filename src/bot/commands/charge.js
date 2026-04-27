@@ -4,6 +4,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } from 'discord.js';
 import { prisma } from '../../db/index.js';
 import { listEnabledGateways } from '../../gateways/index.js';
@@ -11,6 +12,11 @@ import { genTradeNo } from '../../lib/crypto.js';
 import { config } from '../../config.js';
 import { logger } from '../../lib/logger.js';
 import { notifyChannel, orderFields } from '../notifier.js';
+
+async function isChargerAuthorized(userId) {
+  const c = await prisma.charger.findUnique({ where: { userId } }).catch(() => null);
+  return !!c;
+}
 
 export const data = new SlashCommandBuilder()
   .setName('charge')
@@ -44,6 +50,13 @@ export async function autocomplete(interaction) {
 }
 
 export async function execute(interaction) {
+  if (!(await isChargerAuthorized(interaction.user.id))) {
+    return interaction.reply({
+      content: '⛔ 你沒有開單權限。請聯繫管理員，或請管理員透過 `/admin` → 「👥 開單者管理」加入授權。',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
   const amount = interaction.options.getInteger('amount', true);
   const item = interaction.options.getString('item', true);
   const provider = interaction.options.getString('gateway', true);
@@ -52,7 +65,7 @@ export async function execute(interaction) {
 
   const gw = await prisma.gatewayConfig.findUnique({ where: { provider } });
   if (!gw || !gw.enabled) {
-    return interaction.reply({ content: `金流 \`${provider}\` 未啟用。請到後台設定。`, ephemeral: true });
+    return interaction.reply({ content: `金流 \`${provider}\` 未啟用。請到後台設定。`, flags: MessageFlags.Ephemeral });
   }
 
   const tradeNo = genTradeNo();

@@ -1,5 +1,7 @@
 import { ECPayGateway } from './ecpay.js';
 import { NewebPayGateway } from './newebpay.js';
+import { PayuniGateway } from './payuni.js';
+import { SmilePayGateway } from './smilepay.js';
 import { MockGateway } from './mock.js';
 import { decryptJson } from '../lib/crypto.js';
 import { config } from '../config.js';
@@ -8,6 +10,8 @@ import { prisma } from '../db/index.js';
 const REGISTRY = new Map([
   [ECPayGateway.provider, ECPayGateway],
   [NewebPayGateway.provider, NewebPayGateway],
+  [PayuniGateway.provider, PayuniGateway],
+  [SmilePayGateway.provider, SmilePayGateway],
   [MockGateway.provider, MockGateway],
 ]);
 

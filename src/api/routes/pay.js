@@ -50,8 +50,12 @@ export async function payRoutes(fastify) {
     return autoSubmitForm(payload.actionUrl, payload.formFields);
   });
 
-  // ===== Mock 金流測試頁 =====
+  // ===== Mock 金流測試頁（僅 dev 環境）=====
   fastify.get('/_dev/mock-pay/:tradeNo', async (req, reply) => {
+    if (process.env.NODE_ENV === 'production') {
+      reply.code(404);
+      return errorPage('Not Found');
+    }
     const { tradeNo } = req.params;
     const order = await prisma.order.findUnique({ where: { tradeNo } });
     if (!order) {

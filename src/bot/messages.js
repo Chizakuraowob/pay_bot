@@ -17,7 +17,7 @@ function buildMonitorEmbed(order) {
     .setTitle(`${meta.emoji} ${meta.title}`)
     .setDescription(
       [
-        `狀態：**${order.status}**`,
+        `狀態：**${STATUS_META[order.status]?.title || order.status}**`,
         `訂單：\`${order.tradeNo}\``,
         `金額：NT$ ${order.amount.toLocaleString()}`,
         order.paidAt ? `付款時間：<t:${Math.floor(new Date(order.paidAt).getTime() / 1000)}:f>` : null,

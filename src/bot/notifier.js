@@ -32,6 +32,14 @@ export async function notifyChannel({ level = 'info', title, fields = [], descri
   }
 }
 
+const STATUS_LABEL = {
+  pending: '⏳ 待付款',
+  paid: '✅ 已付款',
+  failed: '❌ 失敗',
+  expired: '⌛ 已過期',
+  cancelled: '🚫 已取消',
+};
+
 export function orderFields(order) {
   return [
     { name: '訂單', value: `\`${order.tradeNo}\``, inline: true },
@@ -39,6 +47,6 @@ export function orderFields(order) {
     { name: '金流', value: order.provider, inline: true },
     { name: '付款者', value: order.payerId ? `<@${order.payerId}>` : '不指定', inline: true },
     { name: '開立者', value: order.creatorId ? `<@${order.creatorId}>` : '-', inline: true },
-    { name: '狀態', value: order.status, inline: true },
+    { name: '狀態', value: STATUS_LABEL[order.status] || order.status, inline: true },
   ];
 }

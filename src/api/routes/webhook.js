@@ -35,6 +35,7 @@ export async function webhookRoutes(fastify) {
         },
       });
       reply.code(400);
+      reply.header('content-type', result.ackContentType || 'text/plain');
       return result.ackResponse;
     }
 
@@ -44,8 +45,28 @@ export async function webhookRoutes(fastify) {
       await prisma.paymentLog.create({
         data: { level: 'warn', event: 'order_not_found', provider, message: result.tradeNo, payload: JSON.stringify(result.raw) },
       });
-      reply.header('content-type', 'text/plain');
+      reply.header('content-type', result.ackContentType || 'text/plain');
       return result.ackResponse;
+    }
+
+    // 金額一致性檢查（防 callback amount 被竄改 / 重放至其他訂單）
+    // 簽章已覆蓋 amount 的 gateway（ECPay/Newebpay/Payuni）會自然抵擋；
+    // 對 SmilePay 這類簽章未覆蓋 amount 的，這層是必要防線。
+    if (typeof result.amount === 'number' && result.amount !== order.amount) {
+      logger.warn({ provider, tradeNo: result.tradeNo, expected: order.amount, got: result.amount }, 'callback amount mismatch');
+      await prisma.paymentLog.create({
+        data: {
+          level: 'error',
+          orderId: order.id,
+          event: 'callback_amount_mismatch',
+          provider,
+          message: `expected=${order.amount} got=${result.amount}`,
+          payload: JSON.stringify(body),
+        },
+      });
+      reply.code(400);
+      reply.header('content-type', result.ackContentType || 'text/plain');
+      return result.ackContentType?.includes('xml') ? '<Roturlstatus>AmountMismatch</Roturlstatus>' : 'amount mismatch';
     }
 
     // idempotent — 已經是終態就不重編輯
@@ -54,7 +75,7 @@ export async function webhookRoutes(fastify) {
       await prisma.paymentLog.create({
         data: { level: 'info', orderId: order.id, event: 'callback_duplicate', provider, message: `already ${order.status}` },
       });
-      reply.header('content-type', 'text/plain');
+      reply.header('content-type', result.ackContentType || 'text/plain');
       return result.ackResponse;
     }
 

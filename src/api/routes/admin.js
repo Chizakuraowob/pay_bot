@@ -131,6 +131,36 @@ export async function adminRoutes(fastify) {
     return order;
   });
 
+  // ===== Chargers (開單授權白名單) =====
+  fastify.get('/api/admin/chargers', async () => {
+    return await prisma.charger.findMany({ orderBy: { createdAt: 'desc' } });
+  });
+
+  const chargerSchema = z.object({
+    userId: z.string().regex(/^\d{15,25}$/, 'invalid Discord user id'),
+    username: z.string().max(64).optional(),
+  });
+
+  fastify.post('/api/admin/chargers', async (req, reply) => {
+    const parsed = chargerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      reply.code(400);
+      return { error: parsed.error.flatten() };
+    }
+    const { userId, username } = parsed.data;
+    const row = await prisma.charger.upsert({
+      where: { userId },
+      update: { username: username ?? null },
+      create: { userId, username: username ?? null, addedBy: req.adminUser?.u || 'web' },
+    });
+    return row;
+  });
+
+  fastify.delete('/api/admin/chargers/:userId', async (req) => {
+    await prisma.charger.deleteMany({ where: { userId: req.params.userId } });
+    return { ok: true };
+  });
+
   // ===== Logs =====
   fastify.get('/api/admin/logs', async (req) => {
     const { level, take = '100' } = req.query || {};

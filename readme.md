@@ -1,6 +1,6 @@
 # Pay Discord Bot
 
-支援台灣金流（綠界 ECPay、藍新 NewebPay）的 Discord 收款 bot，含管理後台。
+支援台灣金流（綠界 ECPay、藍新 NewebPay、統一金流 PAYUNi、速買配 SmilePay）的 Discord 收款 bot，含管理後台。
 
 ## 功能
 - `/charge` 斜線指令：金額、品項、金流、指定付款者（可選）
@@ -64,12 +64,18 @@ npm start
 |---|---|
 | ECPay 綠界 | MerchantID / HashKey / HashIV |
 | NewebPay 藍新 | MerchantID / HashKey / HashIV |
+| PAYUNi 統一金流 | MerID / HashKey (32 bytes) / HashIV (16 bytes) |
+| SmilePay 速買配 | Dcvc / Rvg2c / Verify_key |
 
 ### 在金流後台設定 callback URL
 - 綠界 `ReturnURL`：`{PUBLIC_BASE_URL}/webhook/ecpay`
 - 綠界 `ClientBackURL`（付款完成導回）：`{PUBLIC_BASE_URL}/pay/return`
 - 藍新 `NotifyURL`：`{PUBLIC_BASE_URL}/webhook/newebpay`
 - 藍新 `ReturnURL`：`{PUBLIC_BASE_URL}/pay/return`
+- PAYUNi `NotifyURL`：`{PUBLIC_BASE_URL}/webhook/payuni`
+- PAYUNi `ReturnURL`：`{PUBLIC_BASE_URL}/pay/return`
+- SmilePay `Send_url`（背景通知）：`{PUBLIC_BASE_URL}/webhook/smilepay`
+- SmilePay `Roturl`（前景導回）：`{PUBLIC_BASE_URL}/pay/return`
 
 ## 使用方式（在 Discord）
 
@@ -82,18 +88,17 @@ Bot 會回：
 2. 下一則監測訊息：⏳ — 付款完成 / 失敗 / 過期時，舊訊息會被刪掉並發新的完成訊息
 
 ### Discord 管理（替代後台）
-先把自己 Discord User ID 加進 `DISCORD_ADMIN_USER_IDS`（可逗號分隔多人），然後：
+先把自己 Discord User ID 加進 `DISCORD_ADMIN_USER_IDS`（可逗號分隔多人），然後在任一頻道輸入：
 ```
-/admin gateway list                          # 列出金流
-/admin gateway enable provider:mock          # 啟用 / 停用
-/admin gateway disable provider:mock
-/admin order list status:pending take:10     # 查訂單
-/admin order info trade_no:TX1234ABCD        # 單筆詳情
-/admin order cancel trade_no:TX1234ABCD      # 取消 pending 訂單
-/admin log tail level:error take:10          # 查 log
-/admin stats                                 # 統計
+/admin
 ```
-所有回應都是 ephemeral（只有自己看得到）。
+會跳出一張只有你看得到（ephemeral）的管理面板，含按鈕：
+- 💳 **金流商管理** — 列表 / 新增（modal 表單填憑證） / 啟用停用 / 沙箱切換 / 編輯憑證 / 刪除（二次確認）
+- 📋 **訂單管理** — 依狀態切換、單筆詳情、取消 pending 訂單（二次確認）
+- 📜 **系統紀錄** — 依 level 過濾最近 log
+- 📊 **統計** — 訂單數量 / 已收金額
+
+所有按鈕、下拉選單、表單回應都是 ephemeral，僅發送 `/admin` 的管理員自己看得到，其他人不會看到也無法點按按鈕。新增 / 編輯金流憑證走 Discord 原生 modal 表單，不必開瀏覽器。
 
 ### Log 頻道
 設定 `DISCORD_LOG_CHANNEL_ID` 後，bot 會把訂單事件以 embed 鏡射到該頻道（建立 / 付款 / 失敗 / 過期）。權限要點：bot 角色在該頻道需有 `Send Messages` 與 `Embed Links`。

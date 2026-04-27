@@ -83,3 +83,11 @@ model AdminUser {
   createdAt    DateTime @default(now())
   lastLoginAt  DateTime?
 }
+
+// 開單授權白名單（除了 DISCORD_ADMIN_USER_IDS 之外，可額外授權）
+model Charger {
+  userId    String   @id           // discord user id
+  username  String?                // 顯示用
+  addedBy   String                 // 授權者 discord user id
+  createdAt DateTime @default(now())
+}
